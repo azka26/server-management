@@ -19,8 +19,109 @@ namespace ServerManagementApi.Controllers
 
         [DeploymentKey()]
         [HttpPost()]
+        [Route("DeployAppOnly/{siteName}")]
+        public IActionResult DeployAppOnly([FromRoute] string siteName, IFormFile frontend, IFormFile backend)
+        {
+            try
+            {
+                if (frontend == null || backend == null)
+                {
+                    return BadRequest("Both frontend and backend files must be uploaded");
+                }
+
+                if (frontend.ContentType != "application/zip" || backend.ContentType != "application/zip")
+                {
+                    return BadRequest("Both frontend and backend files must be zip files");
+                }
+
+                var basePath = $"C:\\inetpub\\wwwroot";
+
+                var siteBackend = $"/{siteName}/backend";
+                var siteFrontend = $"/{siteName}";
+
+                var physicalPathBackend = $"{basePath}\\{siteName}\\backend";
+                var physicalPathFrontend = $"{basePath}\\{siteName}\\frontend";
+                var tempPathFrontend = $"{basePath}\\{siteName}\\temp-frontend";
+                var tempPathBackend = $"{basePath}\\{siteName}\\temp-backend";
+
+                if (!Directory.Exists(physicalPathBackend))
+                {
+                    Directory.CreateDirectory(physicalPathBackend);
+                }
+
+                if (!Directory.Exists(physicalPathFrontend))
+                {
+                    Directory.CreateDirectory(physicalPathFrontend);
+                }
+
+                if (!Directory.Exists(tempPathBackend))
+                {
+                    Directory.CreateDirectory(tempPathBackend);
+                }
+
+                if (!Directory.Exists(tempPathFrontend))
+                {
+                    Directory.CreateDirectory(tempPathFrontend);
+                }
+
+                #region Cleanup
+                _iisManagement.DeleteSiteIfExist(siteBackend);
+                _iisManagement.DeleteSiteIfExist(siteFrontend);
+                #endregion
+
+                CleanDirectory(tempPathFrontend);
+                CleanDirectory(tempPathBackend);
+
+                #region Register IIS
+                _iisManagement.CreateSite(siteName, siteFrontend, physicalPathFrontend);
+                _iisManagement.CreateSite(siteName, siteBackend, physicalPathBackend);
+
+                _iisManagement.StopPool(siteName);
+
+                #region DEPLOY FILES
+                using (var frontendStream = frontend.OpenReadStream())
+                {
+                    ZipFile.ExtractToDirectory(frontendStream, tempPathFrontend);
+                }
+                MoveAll(tempPathFrontend, physicalPathFrontend);
+
+                using (var backendStream = backend.OpenReadStream())
+                {
+                    ZipFile.ExtractToDirectory(backendStream, tempPathBackend);
+                }
+                MoveAll(tempPathBackend, physicalPathBackend);
+                #endregion
+
+                _iisManagement.StartPool(siteName);
+                #endregion
+
+                if (Directory.Exists(tempPathFrontend))
+                {
+                    Directory.Delete(tempPathFrontend, true);
+                }
+                
+                if (Directory.Exists(tempPathBackend))
+                {
+                    Directory.Delete(tempPathBackend, true);
+                }
+                
+                return Ok(true);
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("Error", ex.Message);
+                if (ex.InnerException != null)
+                {
+                    ModelState.AddModelError("InnerException", ex.InnerException.Message);
+                }
+                return BadRequest(ModelState);
+            }
+        }
+
+        [DeploymentKey()]
+        [HttpPost()]
         [Route("DeployApp/{windowServiceName}/{siteName}")]
-        public async Task<IActionResult> DeployApp([FromRoute] string siteName, [FromRoute] string windowServiceName, IFormFile frontend, IFormFile backend)
+        public IActionResult DeployApp([FromRoute] string siteName, [FromRoute] string windowServiceName, IFormFile frontend, IFormFile backend)
         {
             try
             {
