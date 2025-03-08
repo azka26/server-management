@@ -14,24 +14,19 @@ namespace ServerManagement
         {
             using var serverManager = new ServerManager();
             var pool = serverManager.ApplicationPools.FirstOrDefault(f => f.Name == poolName);
-            if (pool != null)
+            if (pool == null)
             {
-                pool.ManagedPipelineMode = ManagedPipelineMode.Integrated;
-                pool.ManagedRuntimeVersion = "";
-                pool.AutoStart = true;
-                pool.ProcessModel.IdentityType = ProcessModelIdentityType.ApplicationPoolIdentity;
-                serverManager.CommitChanges();
-                return;
+                pool = serverManager.ApplicationPools.Add(poolName);
             }
 
-            pool = serverManager.ApplicationPools.Add(poolName);
             pool.ManagedPipelineMode = ManagedPipelineMode.Integrated;
             pool.ManagedRuntimeVersion = "";
             pool.AutoStart = true;
+            pool.ProcessModel.IdentityType = ProcessModelIdentityType.ApplicationPoolIdentity;
             serverManager.CommitChanges();
         }
 
-        public async Task StartPool(string poolName, int maxWaitingTimeMiliseconds = 1000, CancellationToken cancellationToken = default)
+        public async Task StartPool(string poolName, int maxWaitingTimeMiliseconds = 60000, CancellationToken cancellationToken = default)
         {
             using var serverManager = new ServerManager();
             var pool = serverManager.ApplicationPools.FirstOrDefault(f => f.Name == poolName);
@@ -50,7 +45,7 @@ namespace ServerManagement
             throw new Exception($"Pool with name = {poolName} not found.");
         }
 
-        public async Task StopPool(string poolName, int maxWaitingTimeMiliseconds = 1000, CancellationToken cancellationToken = default)
+        public async Task StopPool(string poolName, int maxWaitingTimeMiliseconds = 60000, CancellationToken cancellationToken = default)
         {
             using var serverManager = new ServerManager();
             var pool = serverManager.ApplicationPools.FirstOrDefault(f => f.Name == poolName);
@@ -117,7 +112,7 @@ namespace ServerManagement
             }
         }
 
-        private async Task WaitUntil(string poolName, ObjectState targetPoolState, int maxWaitingTimeMiliseconds = 1000, CancellationToken cancellationToken = default)
+        private async Task WaitUntil(string poolName, ObjectState targetPoolState, int maxWaitingTimeMiliseconds, CancellationToken cancellationToken = default)
         {
             var taskDelay = Task.Delay(maxWaitingTimeMiliseconds, cancellationToken);
             var task = Task.Run(async () =>

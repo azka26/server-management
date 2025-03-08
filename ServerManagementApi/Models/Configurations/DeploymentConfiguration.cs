@@ -1,4 +1,4 @@
-﻿namespace ServerManagementApi.Models
+﻿namespace ServerManagementApi.Models.Configurations
 {
     public class DeploymentConfiguration
     {

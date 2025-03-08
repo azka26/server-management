@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc;
-using ServerManagementApi.Models;
+using ServerManagementApi.Models.Configurations;
 
 namespace ServerManagementApi.Attributes
 {

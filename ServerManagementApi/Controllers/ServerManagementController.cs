@@ -4,13 +4,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ServerManagement;
 using ServerManagementApi.Attributes;
-using ServerManagementApi.Models;
+using ServerManagementApi.Models.Configurations;
+using ServerManagementApi.Models.Entities;
 
 namespace ServerManagementApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [DeploymentKey()]
+    // [DeploymentKey()]
     public class ServerManagementController : ControllerBase
     {
         private readonly IISManagement _iisManagement;
@@ -242,7 +243,13 @@ namespace ServerManagementApi.Controllers
                     throw new InvalidDataException("File is required");
                 }
 
-                if (file.ContentType != "application/zip")
+                var allowedContentTypes = new[]
+                {
+                    "application/x-zip-compressed",
+                    "application/zip"
+                };
+
+                if (!allowedContentTypes.Any(f => f == file.ContentType))
                 {
                     throw new InvalidDataException("File must be a zip file");
                 }
@@ -309,7 +316,7 @@ namespace ServerManagementApi.Controllers
 
                 await DeployFrontend(model, cancellationToken);
                 await DeployBackend(model, cancellationToken);
-                await RegisterService(model, cancellationToken);
+                RegisterService(model, cancellationToken);
                 
                 await _iisManagement.StartPool(model.ApplicationName, cancellationToken: cancellationToken);
 
@@ -379,7 +386,7 @@ namespace ServerManagementApi.Controllers
             }
             Directory.CreateDirectory(targetDir);
 
-            var serverFile = _appSettings.DeploymentConfiguration.UploadPath + package.ServerFileName;
+            var serverFile = Path.Combine(_appSettings.DeploymentConfiguration.UploadPath, package.ServerFileName);
             var fs = new FileStream(serverFile, FileMode.Open, FileAccess.Read);
             ZipFile.ExtractToDirectory(fs, targetDir);
         }
@@ -400,7 +407,9 @@ namespace ServerManagementApi.Controllers
             ExtractPackage(package, tempApplicationPath);
             MoveAll(tempApplicationPath, applicationPath);
 
-            _iisManagement.CreateSite(model.ApplicationName, $"/{model.ApplicationName}", applicationPath);
+            var siteUrl = $"/{model.ApplicationName}";
+            _iisManagement.DeleteSiteIfExist(siteUrl);
+            _iisManagement.CreateSite(model.ApplicationName, siteUrl, applicationPath);
         }
 
         private async Task DeployBackend(DeployPackage model, CancellationToken cancellationToken = default)
@@ -419,10 +428,12 @@ namespace ServerManagementApi.Controllers
             ExtractPackage(package, tempApplicationPath);
             MoveAll(tempApplicationPath, applicationPath);
 
-            _iisManagement.CreateSite(model.ApplicationName, $"/{model.ApplicationName}/backend", applicationPath);
+            var siteUrl = $"/{model.ApplicationName}/backend";
+            _iisManagement.DeleteSiteIfExist(siteUrl);
+            _iisManagement.CreateSite(model.ApplicationName, siteUrl, applicationPath);
         }
 
-        private async Task RegisterService(DeployPackage model, CancellationToken cancellationToken = default)
+        private void RegisterService(DeployPackage model, CancellationToken cancellationToken = default)
         {
             if (!model.BackendPackageId.HasValue || string.IsNullOrWhiteSpace(model.ApplicationName) || string.IsNullOrEmpty(model.BackgroundServiceName)) return;
             var applicationPath = Path.Combine(_appSettings.DeploymentConfiguration.BasePath, model.ApplicationName, "backend");
