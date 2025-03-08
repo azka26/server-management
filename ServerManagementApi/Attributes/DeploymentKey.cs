@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc;
+using ServerManagementApi.Models;
 
 namespace ServerManagementApi.Attributes
 {
@@ -12,8 +13,8 @@ namespace ServerManagementApi.Attributes
         public override void OnActionExecuting(ActionExecutingContext context)
         {
             var httpContext = context.HttpContext;
-            var configuration = httpContext.RequestServices.GetService<IConfiguration>()!;
-            var expectedKey = configuration["DeploymentKey"];
+            var appsettings = httpContext.RequestServices.GetService<AppSettings>()!;
+            var expectedKey = appsettings.DeploymentConfiguration.DeploymentKey;
 
             if (string.IsNullOrEmpty(expectedKey))
             {

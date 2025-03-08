@@ -3,11 +3,13 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Configuration;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace ServerManagement
 {
     public class IISManagement
-    {   
+    {
         public void CreatePoolIfNotExists(string poolName)
         {
             using var serverManager = new ServerManager();
@@ -17,6 +19,7 @@ namespace ServerManagement
                 pool.ManagedPipelineMode = ManagedPipelineMode.Integrated;
                 pool.ManagedRuntimeVersion = "";
                 pool.AutoStart = true;
+                pool.ProcessModel.IdentityType = ProcessModelIdentityType.ApplicationPoolIdentity;
                 serverManager.CommitChanges();
                 return;
             }
@@ -28,7 +31,7 @@ namespace ServerManagement
             serverManager.CommitChanges();
         }
 
-        public void StartPool(string poolName)
+        public async Task StartPool(string poolName, int maxWaitingTimeMiliseconds = 1000, CancellationToken cancellationToken = default)
         {
             using var serverManager = new ServerManager();
             var pool = serverManager.ApplicationPools.FirstOrDefault(f => f.Name == poolName);
@@ -40,13 +43,14 @@ namespace ServerManagement
                     serverManager.CommitChanges();
                 }
 
+                await WaitUntil(poolName, ObjectState.Started, maxWaitingTimeMiliseconds, cancellationToken);
                 return;
             }
-            
+
             throw new Exception($"Pool with name = {poolName} not found.");
         }
 
-        public void StopPool(string poolName)
+        public async Task StopPool(string poolName, int maxWaitingTimeMiliseconds = 1000, CancellationToken cancellationToken = default)
         {
             using var serverManager = new ServerManager();
             var pool = serverManager.ApplicationPools.FirstOrDefault(f => f.Name == poolName);
@@ -58,10 +62,19 @@ namespace ServerManagement
                     serverManager.CommitChanges();
                 }
 
+                await WaitUntil(poolName, ObjectState.Stopped, maxWaitingTimeMiliseconds, cancellationToken);
                 return;
             }
 
             throw new Exception($"Pool with name = {poolName} not found.");
+        }
+
+
+        private ObjectState GetPoolState(string poolName) {
+            using var serverManager = new ServerManager();
+            var pool = serverManager.ApplicationPools.FirstOrDefault(f => f.Name == poolName);
+            if (pool == null) throw new Exception($"Pool with name = {poolName} not found.");
+            return pool.State;
         }
 
         public void DeleteSiteIfExist(string siteUrl)
@@ -104,34 +117,25 @@ namespace ServerManagement
             }
         }
 
-        public void DeployApps(string appName, string physicalPath)
+        private async Task WaitUntil(string poolName, ObjectState targetPoolState, int maxWaitingTimeMiliseconds = 1000, CancellationToken cancellationToken = default)
         {
-            var siteUrlFrontend = $"/{appName}";
-            var siteUrlBackend = $"/{appName}/backend";
-
-            var physicalPathFrontend = Path.Combine(physicalPath, appName, "frontend");
-            var physicalPathBackend = Path.Combine(physicalPath, appName, "backend");
-
-            if (!Directory.Exists(physicalPathFrontend))
+            var taskDelay = Task.Delay(maxWaitingTimeMiliseconds, cancellationToken);
+            var task = Task.Run(async () =>
             {
-                Directory.CreateDirectory(physicalPathFrontend);
-            }
-
-            if (!Directory.Exists(physicalPathBackend))
+                var poolState = GetPoolState(poolName);
+                var retryCount = 0;
+                for (; poolState != targetPoolState;)
+                {
+                    poolState = GetPoolState(poolName);
+                    await Task.Delay(500);
+                    retryCount++;
+                }
+            }, cancellationToken);
+            var completed = await Task.WhenAny(taskDelay, task);
+            if (completed == taskDelay)
             {
-                Directory.CreateDirectory(physicalPathBackend);
+                throw new Exception($"Failed Waiting Change State {poolName} to {targetPoolState.ToString()}");
             }
-
-            CreatePoolIfNotExists(appName);
-            StopPool(appName);
-
-            DeleteSiteIfExist(siteUrlBackend);
-            DeleteSiteIfExist(siteUrlFrontend);
-
-            CreateSite(appName, siteUrlFrontend, physicalPathFrontend);
-            CreateSite(appName, siteUrlBackend, physicalPathBackend);
-
-            StartPool(appName);
         }
     }
 }
