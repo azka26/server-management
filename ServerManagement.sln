@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerManagement", "ServerM
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerManagementApi", "ServerManagementApi\ServerManagementApi.csproj", "{6FC38B64-D247-48B0-8C33-9E39C2C244B2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeploymentClientTool", "DeploymentClientTool\DeploymentClientTool.csproj", "{F13116F2-E624-439A-9D45-5EDB05E332BB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{6FC38B64-D247-48B0-8C33-9E39C2C244B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6FC38B64-D247-48B0-8C33-9E39C2C244B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6FC38B64-D247-48B0-8C33-9E39C2C244B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F13116F2-E624-439A-9D45-5EDB05E332BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F13116F2-E624-439A-9D45-5EDB05E332BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F13116F2-E624-439A-9D45-5EDB05E332BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F13116F2-E624-439A-9D45-5EDB05E332BB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DeploymentClientTool": {
+      "commandName": "Project",
+      "commandLineArgs": "-baseUrl=\"https://localhost:44366\"\r\n-frontendPackage=\"D:\\temp\\frontend.zip\"\r\n-backendPackage=\"D:\\temp\\backend.zip\"\r\n-applicationName=\"test\"\r\n-backgroundServiceName=\"\"\r\n-backgroundServiceDescription=\"\""
+    }
+  }
+}
