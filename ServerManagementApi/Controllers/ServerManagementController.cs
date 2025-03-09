@@ -11,7 +11,7 @@ namespace ServerManagementApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    // [DeploymentKey()]
+    [DeploymentKey()]
     public class ServerManagementController : ControllerBase
     {
         private readonly IISManagement _iisManagement;

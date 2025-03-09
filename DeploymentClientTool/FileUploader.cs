@@ -1,6 +1,6 @@
 ﻿public class FileUploader
 {
-    public static async Task<int> UploadFileAsync(string url, FileInfo fileInfo)
+    public static async Task<int> UploadFileAsync(string url, FileInfo fileInfo, string deploymentKey)
     {
         using var fs = File.OpenRead(fileInfo.FullName);
         var content = new MultipartFormDataContent();
@@ -16,6 +16,7 @@
         };
 
         using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("DeploymentKey", deploymentKey);
         var response = await httpClient.PostAsync(url, new ProgressableContent(content, progress));
         Console.WriteLine();
 

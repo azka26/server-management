@@ -1,4 +1,6 @@
-﻿namespace DeploymentClientTool;
+﻿using System.Net.Http.Json;
+
+namespace DeploymentClientTool;
 public partial class Main
 {
 
@@ -28,7 +30,7 @@ public partial class Main
                 Console.WriteLine("Deploying BackendPackage...");
                 var fileInfo = new FileInfo(parameter.BackendPackage);
                 var url = $"{parameter.BaseUrl!.TrimEnd('/')}/api/ServerManagement/UploadPackage";
-                backendId = FileUploader.UploadFileAsync(url, fileInfo).Result;
+                backendId = FileUploader.UploadFileAsync(url, fileInfo, parameter.DeploymentKey!).Result;
             }
 
             int frontendId = 0;
@@ -37,9 +39,10 @@ public partial class Main
                 Console.WriteLine("Deploying FrontendPackage...");
                 var fileInfo = new FileInfo(parameter.FrontendPackage);
                 var url = $"{parameter.BaseUrl!.TrimEnd('/')}/api/ServerManagement/UploadPackage";
-                frontendId = FileUploader.UploadFileAsync(url, fileInfo).Result;
+                frontendId = FileUploader.UploadFileAsync(url, fileInfo, parameter.DeploymentKey!).Result;
             }
 
+            Console.WriteLine("Deploying Package...");
             var deployPackageRequest = new DeployPackageRequest
             {
                 ApplicationName = parameter.ApplicationName,
@@ -48,6 +51,22 @@ public partial class Main
                 BackgroundServiceName = parameter.BackgroundServiceName,
                 BackgroundServiceDescription = parameter.BackgroundServiceDescription
             };
+
+            var deployUrl = $"{parameter.BaseUrl!.TrimEnd('/')}/api/ServerManagement/DeployPackage";
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("DeploymentKey", parameter.DeploymentKey);
+            var response = httpClient.PostAsJsonAsync(deployUrl, deployPackageRequest).Result;
+
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine("Deploy Success.");
+            }
+            else
+            {
+                Console.WriteLine($"Deploy Failed");
+                Console.WriteLine($"Status Code: {response.StatusCode}");
+                Console.WriteLine($"Body Response: {response.Content.ReadAsStringAsync().Result}");
+            }
         }
 
         static DeploymentParameter BindParameter(string[] args)
@@ -80,6 +99,10 @@ public partial class Main
                 {
                     parameter.BackgroundServiceDescription = arg.Substring("-backgroundServiceDescription=".Length).Trim('\"').Trim('\'');
                 }
+                else if (argLower.StartsWith("-deploymentKey=".ToLower()))
+                {
+                    parameter.DeploymentKey = arg.Substring("-deploymentKey=".Length).Trim('\"').Trim('\'');
+                }
             }
             return parameter;
         }
@@ -101,6 +124,12 @@ public partial class Main
             if (string.IsNullOrWhiteSpace(parameter.ApplicationName))
             {
                 Console.WriteLine("ApplicationName is required.");
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(parameter.DeploymentKey))
+            {
+                Console.WriteLine("DeploymentKey is required.");
                 return false;
             }
 

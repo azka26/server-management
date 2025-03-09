@@ -7,4 +7,5 @@ public class DeploymentParameter
     public string? ApplicationName { get; set; }
     public string? BackgroundServiceName { get; set; }
     public string? BackgroundServiceDescription { get; set; }
+    public string? DeploymentKey { get; set; }
 }
